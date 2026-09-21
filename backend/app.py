@@ -17,56 +17,90 @@ def health():
 
 @app.get("/api/services")
 def services():
-    categories = ["Eletricidade","Canalização","Reparações","Limpeza","Tecnologia","Design"]
-    return jsonify(categories)
+    return jsonify(["Eletricidade", "Canalização", "Reparações", "Limpeza", "Tecnologia", "Design"])
+
+@app.post("/api/users")
+def create_user():
+    data = request.get_json(silent=True) or {}
+    if not data.get("name") or not data.get("phone"):
+        return jsonify({"error": "Nome e telefone são obrigatórios"}), 400
+    user = User(name=data["name"], phone=data["phone"], email=data.get("email"),
+                role=data.get("role", "client"), location=data.get("location"),
+                specialty=data.get("specialty"))
+    db.session.add(user)
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return jsonify({"error": "Telefone ou email já registado"}), 409
+    return jsonify({"id": user.id, "name": user.name, "role": user.role}), 201
+
+@app.get("/api/users/<int:user_id>")
+def get_user(user_id):
+    user = User.query.get_or_404(user_id)
+    return jsonify({"id": user.id, "name": user.name, "phone": user.phone,
+                    "email": user.email, "role": user.role, "location": user.location,
+                    "specialty": user.specialty, "rating": user.rating})
 
 @app.post("/api/requests")
 def create_request():
     data = request.get_json(silent=True) or {}
-    required = ["client_id","service","description","location"]
+    required = ["client_id", "service", "description", "location"]
     missing = [x for x in required if not data.get(x)]
     if missing:
-        return jsonify({"error":"Campos obrigatórios em falta","fields":missing}),400
-    item = ServiceRequest(
-        client_id=data["client_id"], service=data["service"],
-        description=data["description"], location=data["location"],
-        budget=data.get("budget"), date=data.get("date"), status="open"
-    )
-    db.session.add(item); db.session.commit()
-    return jsonify(item.to_dict()),201
+        return jsonify({"error": "Campos obrigatórios em falta", "fields": missing}), 400
+    item = ServiceRequest(client_id=data["client_id"], service=data["service"],
+                          description=data["description"], location=data["location"],
+                          budget=data.get("budget"), date=data.get("date"), status="open")
+    db.session.add(item)
+    db.session.commit()
+    return jsonify(item.to_dict()), 201
 
 @app.get("/api/requests")
 def list_requests():
-    items=ServiceRequest.query.order_by(ServiceRequest.id.desc()).all()
+    items = ServiceRequest.query.order_by(ServiceRequest.id.desc()).all()
+    return jsonify([x.to_dict() for x in items])
+
+@app.get("/api/requests/<int:request_id>")
+def get_request(request_id):
+    return jsonify(ServiceRequest.query.get_or_404(request_id).to_dict())
+
+@app.get("/api/requests/<int:request_id>/proposals")
+def list_proposals(request_id):
+    items = Proposal.query.filter_by(request_id=request_id).order_by(Proposal.id.desc()).all()
     return jsonify([x.to_dict() for x in items])
 
 @app.post("/api/proposals")
 def create_proposal():
-    data=request.get_json(silent=True) or {}
-    required=["request_id","professional_id","price"]
-    missing=[x for x in required if data.get(x) is None]
-    if missing: return jsonify({"error":"Campos obrigatórios em falta","fields":missing}),400
-    proposal=Proposal(request_id=data["request_id"],professional_id=data["professional_id"],price=data["price"],message=data.get("message",""),status="pending")
-    db.session.add(proposal); db.session.commit()
-    return jsonify(proposal.to_dict()),201
+    data = request.get_json(silent=True) or {}
+    required = ["request_id", "professional_id", "price"]
+    missing = [x for x in required if data.get(x) is None]
+    if missing:
+        return jsonify({"error": "Campos obrigatórios em falta", "fields": missing}), 400
+    proposal = Proposal(request_id=data["request_id"], professional_id=data["professional_id"],
+                        price=data["price"], message=data.get("message", ""), status="pending")
+    db.session.add(proposal)
+    db.session.commit()
+    return jsonify(proposal.to_dict()), 201
 
 @app.post("/api/contracts")
 def create_contract():
-    data=request.get_json(silent=True) or {}
-    required=["request_id","proposal_id","client_id","professional_id","price"]
-    missing=[x for x in required if data.get(x) is None]
-    if missing: return jsonify({"error":"Campos obrigatórios em falta","fields":missing}),400
-    contract=Contract(**{k:data[k] for k in required},status="active")
+    data = request.get_json(silent=True) or {}
+    required = ["request_id", "proposal_id", "client_id", "professional_id", "price"]
+    missing = [x for x in required if data.get(x) is None]
+    if missing:
+        return jsonify({"error": "Campos obrigatórios em falta", "fields": missing}), 400
+    contract = Contract(**{k: data[k] for k in required}, status="active")
     db.session.add(contract)
-    req=ServiceRequest.query.get(data["request_id"])
-    if req: req.status="contracted"
+    req = ServiceRequest.query.get(data["request_id"])
+    if req:
+        req.status = "contracted"
     db.session.commit()
-    return jsonify(contract.to_dict()),201
+    return jsonify(contract.to_dict()), 201
 
 @app.get("/api/contracts/<int:contract_id>")
 def get_contract(contract_id):
-    item=Contract.query.get_or_404(contract_id)
-    return jsonify(item.to_dict())
+    return jsonify(Contract.query.get_or_404(contract_id).to_dict())
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0",port=5000,debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)

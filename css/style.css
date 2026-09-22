@@ -76,3 +76,5 @@ footer{background:rgba(255,255,255,.85)}
 @media(prefers-reduced-motion:reduce){
  *,*:before,*:after{scroll-behavior:auto!important;transition:none!important;transform:none!important}
 }
+
+.skip-link{position:fixed;left:16px;top:-60px;z-index:100;background:var(--dark);color:#fff;padding:10px 14px;border-radius:10px;font-weight:800;font-size:12px;box-shadow:var(--shadow)}.skip-link:focus{top:16px}

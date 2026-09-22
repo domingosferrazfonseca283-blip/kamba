@@ -3,16 +3,20 @@ const API_BASE = window.KAMBA_API || (isLocalHost ? 'http://127.0.0.1:5000/api' 
 
 const modal = document.getElementById('modal');
 const content = document.getElementById('modalContent');
+let lastFocusedElement = null;
 
 function openModal(type) {
   if (!modal || !content) return;
   if (type !== 'support') return;
 
   content.innerHTML = `
-    <h2>Falar com o suporte</h2>
+    <h2 id="supportDialogTitle">Falar com o suporte</h2>
     <div class="modal-form">
-      <input id="supportName" placeholder="Nome completo">
-      <input id="supportContact" placeholder="Email ou telefone">
+      <label for="supportName">Nome completo</label>
+      <input id="supportName" placeholder="Nome completo" autocomplete="name">
+      <label for="supportContact">Email ou telefone</label>
+      <input id="supportContact" placeholder="Email ou telefone" autocomplete="email">
+      <label for="supportTopic">Assunto</label>
       <select id="supportTopic">
         <option>Ajuda com o aplicativo</option>
         <option>Conta e acesso</option>
@@ -21,12 +25,18 @@ function openModal(type) {
         <option>Segurança ou reclamação</option>
         <option>Outro assunto</option>
       </select>
+      <label for="supportMessage">Mensagem</label>
       <textarea id="supportMessage" placeholder="Descreve a situação ou a tua dúvida"></textarea>
-      <button class="btn primary" id="supportBtn">Enviar mensagem</button>
-      <span class="modal-note" id="supportStatus"></span>
+      <button type="button" class="btn primary" id="supportBtn">Enviar mensagem</button>
+      <span class="modal-note" id="supportStatus" aria-live="polite"></span>
     </div>`;
 
+  lastFocusedElement = document.activeElement;
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-modal', 'true');
+  modal.setAttribute('aria-labelledby', 'supportDialogTitle');
   modal.classList.add('open');
+  document.getElementById('supportName')?.focus();
 
   document.getElementById('supportBtn')?.addEventListener('click', async () => {
     const name = document.getElementById('supportName').value.trim();
@@ -90,16 +100,34 @@ document.querySelectorAll('[data-modal]').forEach(button => {
   button.addEventListener('click', () => openModal(button.dataset.modal));
 });
 
+function closeModal() {
+  if (!modal) return;
+  modal.classList.remove('open');
+  lastFocusedElement?.focus?.();
+}
+
 document.querySelectorAll('.close').forEach(button => {
-  button.addEventListener('click', () => modal?.classList.remove('open'));
+  button.setAttribute('type', 'button');
+  button.addEventListener('click', closeModal);
 });
 
 modal?.addEventListener('click', event => {
   if (event.target === modal) {
-    modal.classList.remove('open');
+    closeModal();
   }
 });
 
+
+const searchInput = document.getElementById('helpSearch');
+const searchButton = document.getElementById('helpSearchBtn');
+const filterInput = document.getElementById('helpFilter');
+const filterSelect = document.getElementById('helpCategory');
+
+[searchInput, filterInput].forEach(input => {
+  if (input) input.setAttribute('aria-label', input.getAttribute('placeholder') || 'Pesquisar');
+});
+searchButton?.setAttribute('type', 'button');
+filterSelect?.setAttribute('aria-label', 'Filtrar temas da central de ajuda');
 
 const helpFilter = document.getElementById('helpFilter');
 const helpCategory = document.getElementById('helpCategory');
@@ -162,6 +190,13 @@ if (helpFilter && query) {
 /* Navegação móvel */
 const topbar = document.querySelector('.topbar');
 const menuButton = document.querySelector('.menu');
+const siteNav = topbar?.querySelector('nav');
+
+if (siteNav) siteNav.id = 'site-nav';
+if (menuButton) {
+  menuButton.type = 'button';
+  menuButton.setAttribute('aria-controls', 'site-nav');
+}
 
 menuButton?.addEventListener('click', () => {
   const open = topbar?.classList.toggle('mobile-open');
@@ -179,6 +214,10 @@ document.querySelectorAll('.topbar nav a, .topbar .actions a').forEach(link => {
 
 document.addEventListener('keydown', event => {
   if (event.key === 'Escape') {
+    if (modal?.classList.contains('open')) {
+      closeModal();
+      return;
+    }
     topbar?.classList.remove('mobile-open');
     menuButton?.setAttribute('aria-expanded', 'false');
     menuButton?.setAttribute('aria-label', 'Abrir menu');

@@ -152,3 +152,30 @@ if (helpFilter && query) {
   helpFilter.value = query;
   applyHelpFilters();
 }
+
+
+/* Navegação móvel */
+const topbar = document.querySelector('.topbar');
+const menuButton = document.querySelector('.menu');
+
+menuButton?.addEventListener('click', () => {
+  const open = topbar?.classList.toggle('mobile-open');
+  menuButton.setAttribute('aria-expanded', String(Boolean(open)));
+  menuButton.setAttribute('aria-label', open ? 'Fechar menu' : 'Abrir menu');
+});
+
+document.querySelectorAll('.topbar nav a, .topbar .actions a').forEach(link => {
+  link.addEventListener('click', () => {
+    topbar?.classList.remove('mobile-open');
+    menuButton?.setAttribute('aria-expanded', 'false');
+    menuButton?.setAttribute('aria-label', 'Abrir menu');
+  });
+});
+
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape') {
+    topbar?.classList.remove('mobile-open');
+    menuButton?.setAttribute('aria-expanded', 'false');
+    menuButton?.setAttribute('aria-label', 'Abrir menu');
+  }
+});

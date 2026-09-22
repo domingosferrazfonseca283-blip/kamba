@@ -1,4 +1,5 @@
-const API_BASE = window.KAMBA_API || 'http://127.0.0.1:5000/api';
+const isLocalHost = ['localhost', '127.0.0.1'].includes(location.hostname);
+const API_BASE = window.KAMBA_API || (isLocalHost ? 'http://127.0.0.1:5000/api' : '');
 
 const modal = document.getElementById('modal');
 const content = document.getElementById('modalContent');
@@ -45,6 +46,10 @@ function openModal(type) {
     status.textContent = '';
 
     try {
+      if (!API_BASE) {
+        throw new Error('API de suporte ainda não configurada neste domínio.');
+      }
+
       const response = await fetch(`${API_BASE}/support`, {
         method: 'POST',
         headers: {
@@ -73,7 +78,7 @@ function openModal(type) {
 
     } catch (error) {
       status.textContent =
-        'Não foi possível enviar agora. Tenta novamente ou liga para o apoio Kamba.';
+        'O formulário está temporariamente indisponível. Usa um dos telefones de apoio abaixo ou tenta novamente mais tarde.';
     } finally {
       button.disabled = false;
       button.textContent = 'Enviar mensagem';

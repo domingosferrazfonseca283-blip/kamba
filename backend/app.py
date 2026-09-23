@@ -535,16 +535,34 @@ def list_request_proposals(request_id):
 
 @app.post("/api/proposals/<int:proposal_id>/accept")
 def accept_proposal(proposal_id):
+    session = get_auth_session()
+
+    if not session:
+        return jsonify({
+            "error": "Não autenticado."
+        }), 401
+
+    user = session.user
+
+    if not user or user.role != "client":
+        return jsonify({
+            "error": "Apenas clientes podem aceitar propostas."
+        }), 403
+
     proposal = Proposal.query.get_or_404(proposal_id)
+    request_item = ServiceRequest.query.get_or_404(
+        proposal.request_id
+    )
+
+    if request_item.client_id != user.id:
+        return jsonify({
+            "error": "Não tens permissão para aceitar propostas deste pedido."
+        }), 403
 
     if proposal.status != "pending":
         return jsonify({
             "error": "Esta proposta já não está disponível."
         }), 409
-
-    request_item = ServiceRequest.query.get_or_404(
-        proposal.request_id
-    )
 
     if request_item.status != "open":
         return jsonify({

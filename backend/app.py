@@ -496,8 +496,27 @@ def list_requests():
 
 @app.get("/api/requests/client/<int:client_id>")
 def list_client_requests(client_id):
+    session = get_auth_session()
+
+    if not session:
+        return jsonify({
+            "error": "Não autenticado."
+        }), 401
+
+    user = session.user
+
+    if not user or user.role != "client":
+        return jsonify({
+            "error": "Apenas clientes podem consultar os próprios pedidos."
+        }), 403
+
+    if client_id != user.id:
+        return jsonify({
+            "error": "Não autorizado a consultar pedidos deste cliente."
+        }), 403
+
     items = ServiceRequest.query.filter_by(
-        client_id=client_id
+        client_id=user.id
     ).order_by(ServiceRequest.id.desc()).all()
 
     return jsonify([x.to_dict() for x in items])

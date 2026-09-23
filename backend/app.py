@@ -840,7 +840,39 @@ def create_contract():
 
 @app.get("/api/contracts/<int:contract_id>")
 def get_contract(contract_id):
+    session = get_auth_session()
+
+    if not session:
+        return jsonify({
+            "error": "Não autenticado."
+        }), 401
+
+    user = session.user
+
+    if not user:
+        return jsonify({
+            "error": "Utilizador da sessão não encontrado."
+        }), 401
+
     item = Contract.query.get_or_404(contract_id)
+
+    if user.role == "client":
+        if item.client_id != user.id:
+            return jsonify({
+                "error": "Não tens permissão para consultar este contrato."
+            }), 403
+
+    elif user.role == "professional":
+        if item.professional_id != user.id:
+            return jsonify({
+                "error": "Não tens permissão para consultar este contrato."
+            }), 403
+
+    else:
+        return jsonify({
+            "error": "Não tens permissão para consultar contratos."
+        }), 403
+
     return jsonify(item.to_dict())
 
 

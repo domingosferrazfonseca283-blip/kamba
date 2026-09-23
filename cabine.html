@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="pt-AO">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Cabine Kamba — Área da Equipa</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="css/style.css">
+<style>
+.cabin{min-height:100vh;background:var(--paper)}
+.cabin-top{height:76px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 max(20px,calc((100% - 1160px)/2));gap:18px}
+.cabin-top .brand{margin-right:auto}
+.cabin-badge{font-size:11px;font-weight:800;color:var(--green);background:var(--soft);padding:7px 10px;border-radius:999px}
+.cabin-layout{width:min(1160px,calc(100% - 40px));margin:auto;display:grid;grid-template-columns:220px 1fr;gap:22px;padding:28px 0 60px}
+.cabin-side{background:var(--dark);border-radius:20px;padding:18px;color:#fff;height:max-content;position:sticky;top:94px}
+.cabin-side small{display:block;color:#a9c0b3;text-transform:uppercase;letter-spacing:.12em;font-size:9px;font-weight:900;margin:3px 10px 12px}
+.cabin-nav{display:grid;gap:4px}.cabin-nav a{padding:10px;border-radius:9px;color:#dcebe2;font-size:13px}.cabin-nav a:hover,.cabin-nav a.active{background:rgba(255,255,255,.09);color:#fff}
+.cabin-main{min-width:0}.cabin-head{display:flex;align-items:end;justify-content:space-between;gap:20px;margin-bottom:22px}.cabin-head h1{font-size:42px;margin:0 0 6px}.cabin-head p{margin:0;font-size:14px}
+.cabin-note{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin-bottom:18px}.cabin-note b{display:block;font-size:13px}.cabin-note span{font-size:12px;color:var(--muted)}
+.cabin-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}.cabin-stat{background:#fff;border:1px solid var(--line);border-radius:16px;padding:17px}.cabin-stat small{color:var(--muted);font-size:11px}.cabin-stat strong{display:block;font-size:27px;margin-top:6px}
+.cabin-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.cabin-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:20px}.cabin-card h2{font-size:19px;margin:0 0 5px}.cabin-card>p{font-size:12px;margin:0 0 16px}
+.cabin-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px}.cabin-action{border:1px solid var(--line);border-radius:12px;padding:13px;background:#fafcfb}.cabin-action b{display:block;font-size:13px}.cabin-action span{font-size:11px;color:var(--muted)}
+.cabin-empty{padding:24px 8px;text-align:center;border:1px dashed var(--line);border-radius:12px;color:var(--muted);font-size:12px}
+@media(max-width:850px){.cabin-layout{grid-template-columns:1fr}.cabin-side{position:static}.cabin-nav{grid-template-columns:repeat(2,1fr)}.cabin-stats{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.cabin-layout{width:min(100% - 24px,1160px);padding-top:18px}.cabin-top{padding:0 12px}.cabin-badge{display:none}.cabin-head{align-items:start;flex-direction:column}.cabin-head h1{font-size:36px}.cabin-stats,.cabin-grid,.cabin-actions{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="cabin">
+<header class="cabin-top">
+<a class="brand" href="index.html"><span class="brand-mark">K</span><span>Kamba</span></a>
+<span class="cabin-badge">Área restrita · Equipa Kamba</span>
+<a class="btn ghost" href="cabine-login.html">Acesso da equipa</a>
+</header>
+
+<div class="cabin-layout">
+<aside class="cabin-side">
+<small>Operações</small>
+<nav class="cabin-nav">
+<a class="active" href="cabine.html">Dashboard</a>
+<a href="#atendimento">Atendimento</a>
+<a href="#pedidos">Pedidos</a>
+<a href="#clientes">Clientes</a>
+<a href="#profissionais">Profissionais</a>
+<a href="#contratos">Contratos</a>
+<a href="#avaliacoes">Avaliações</a>
+<a href="#comunicacao">Comunicação</a>
+</nav>
+<small style="margin-top:24px">Controlo</small>
+<nav class="cabin-nav">
+<a href="#equipa">Equipa</a>
+<a href="#auditoria">Auditoria</a>
+</nav>
+</aside>
+
+<main class="cabin-main">
+<div id="sessionGuard" class="cabin-note" style="display:none"><b>Sessão necessária.</b><span>Entra com uma conta da equipa Kamba para aceder à cabine.</span></div>
+<div class="cabin-head">
+<div>
+<h1>Dashboard</h1>
+<p>Centro de operações e suporte da Kamba.</p>
+</div>
+</div>
+
+<div class="cabin-note">
+<b>A mesma operação, um só backend.</b>
+<span>A cabine será ligada ao backend Kamba e aos mesmos dados utilizados pela aplicação. Nenhum indicador abaixo usa dados fictícios.</span>
+</div>
+
+<section class="cabin-stats">
+<div class="cabin-stat"><small>Tickets</small><strong id="statTickets">—</strong></div>
+<div class="cabin-stat"><small>Pedidos abertos</small><strong id="statOpen">—</strong></div>
+<div class="cabin-stat"><small>Pedidos</small><strong id="statRequests">—</strong></div>
+<div class="cabin-stat"><small>Contratos</small><strong id="statContracts">—</strong></div>
+</section>
+
+<section class="cabin-grid">
+<article class="cabin-card" id="atendimento">
+<h2>Operações</h2>
+<p>Áreas principais da equipa Kamba.</p>
+<div class="cabin-actions">
+<a class="cabin-action" href="#"><b>Atendimento</b><span>Tickets e suporte</span></a>
+<a class="cabin-action" href="#pedidos"><b>Pedidos</b><span>Pedidos da aplicação</span></a>
+<a class="cabin-action" href="#contratos"><b>Contratos</b><span>Acompanhamento de contratos</span></a>
+<a class="cabin-action" href="#profissionais"><b>Profissionais</b><span>Base de profissionais</span></a>
+</div>
+</article>
+
+<article class="cabin-card" id="clientes">
+<h2>Atividade recente</h2>
+<p>Registo operacional da equipa.</p>
+<div id="supportList" class="cabin-empty">A carregar atendimento...</div><div id="supportDetail" class="cabin-empty" style="margin-top:12px;display:none"></div>
+</article>
+
+<article class="cabin-card" id="comunicacao">
+<h2>Comunicação interna</h2>
+<p>Espaço reservado à comunicação entre áreas autorizadas.</p>
+<div class="cabin-empty">Comunicação interna preparada para receber mensagens entre áreas autorizadas.</div>
+</article>
+
+<article class="cabin-card" id="equipa">
+<h2>Segurança e auditoria</h2>
+<p>Controlo de acesso, funções e rastreabilidade.</p>
+<div class="cabin-actions">
+<a class="cabin-action" href="#equipa"><b>Equipa</b><span>Utilizadores e permissões</span></a>
+<a class="cabin-action" href="#auditoria"><b>Auditoria</b><span>Ações administrativas</span></a>
+</div>
+</article>
+</section>
+
+<section class="cabin-card" style="margin-top:16px" id="estrutura">
+<h2>Mapa da operação</h2>
+<p>A cabine está organizada para crescer por módulos, mantendo cada área separada por permissões.</p>
+<div class="cabin-actions">
+<div class="cabin-action" id="pedidos"><b>Pedidos</b><span>Entrada, estado e acompanhamento.</span></div>
+<div class="cabin-action" id="contratos"><b>Contratos</b><span>Propostas, execução e estados.</span></div>
+<div class="cabin-action" id="profissionais"><b>Profissionais</b><span>Perfis, atividade e desempenho.</span></div>
+<div class="cabin-action" id="avaliacoes"><b>Avaliações</b><span>Classificações e histórico.</span></div>
+<div class="cabin-action" id="equipa"><b>Equipa</b><span>Funções, áreas e acessos.</span></div>
+<div class="cabin-action" id="auditoria"><b>Auditoria</b><span>Rastreabilidade das ações.</span></div>
+</div>
+</section>
+</main>
+</div>
+</div>
+<script>
+(function () {
+    const token = sessionStorage.getItem("kamba_company_token");
+    const userRaw = sessionStorage.getItem("kamba_company_user");
+    if (!token || !userRaw) {
+        window.location.href = "cabine-login.html";
+        return;
+    }
+
+    try {
+        const user = JSON.parse(userRaw);
+        const badge = document.querySelector(".cabin-badge");
+        if (badge && user.name) {
+            badge.textContent = (user.area || "Área interna") + " · " + user.name;
+        }
+    } catch (_) {
+        sessionStorage.removeItem("kamba_company_token");
+        sessionStorage.removeItem("kamba_company_user");
+        window.location.href = "cabine-login.html";
+    }
+})();
+</script>
+<script>
+(async function () {
+    const token = sessionStorage.getItem("kamba_company_token");
+    if (!token) return;
+
+    function apiBase() {
+        if (window.KAMBA_API) return window.KAMBA_API.replace(/\\/$/, "");
+        if (["localhost", "127.0.0.1"].includes(window.location.hostname)) {
+            return "http://127.0.0.1:5000/api";
+        }
+        return "";
+    }
+
+    const base = apiBase();
+    if (!base) return;
+
+    try {
+        const response = await fetch(base + "/admin/stats", {
+            headers: {"X-Company-Token": token}
+        });
+
+        if (response.status === 401 || response.status === 403) {
+            sessionStorage.removeItem("kamba_company_token");
+            sessionStorage.removeItem("kamba_company_user");
+            window.location.href = "cabine-login.html";
+            return;
+        }
+
+        if (!response.ok) return;
+
+        const stats = await response.json();
+        document.getElementById("statTickets").textContent = stats.total_support_tickets ?? "—";
+        document.getElementById("statOpen").textContent = stats.requests_open ?? "—";
+        document.getElementById("statRequests").textContent = stats.total_requests ?? "—";
+        document.getElementById("statContracts").textContent = stats.total_contracts ?? "—";
+    } catch (_) {
+        // A cabine continua utilizável mesmo quando a API está indisponível.
+    }
+})();
+</script>
+<script>
+(async function () {
+    const token = sessionStorage.getItem("kamba_company_token");
+    if (!token) return;
+
+    function apiBase() {
+        if (window.KAMBA_API) return window.KAMBA_API.replace(/\/$/, "");
+        if (["localhost", "127.0.0.1"].includes(window.location.hostname)) return "http://127.0.0.1:5000/api";
+        return "";
+    }
+
+    const base = apiBase();
+    const list = document.getElementById("supportList");
+    const detail = document.getElementById("supportDetail");
+    if (!base || !list || !detail) return;
+
+    const labels = {
+        open: "Aberto",
+        assigned: "Atribuído",
+        in_progress: "Em atendimento",
+        waiting_client: "Aguardando cliente",
+        resolved: "Resolvido",
+        closed: "Fechado"
+    };
+
+    function escapeHtml(value) {
+        return String(value ?? "").replace(/[&<>"']/g, function (char) {
+            return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[char];
+        });
+    }
+
+    async function loadTicket(id) {
+        const response = await fetch(base + "/admin/support/" + id, {
+            headers: {"X-Company-Token": token}
+        });
+        if (response.status === 401 || response.status === 403) {
+            sessionStorage.removeItem("kamba_company_token");
+            sessionStorage.removeItem("kamba_company_user");
+            window.location.href = "cabine-login.html";
+            return null;
+        }
+        if (!response.ok) throw new Error();
+        return response.json();
+    }
+
+    async function loadTickets() {
+        const response = await fetch(base + "/admin/support", {
+            headers: {"X-Company-Token": token}
+        });
+        if (response.status === 401 || response.status === 403) {
+            sessionStorage.removeItem("kamba_company_token");
+            sessionStorage.removeItem("kamba_company_user");
+            window.location.href = "cabine-login.html";
+            return;
+        }
+        if (!response.ok) throw new Error();
+
+        const tickets = await response.json();
+        if (!tickets.length) {
+            list.className = "cabin-empty";
+            list.textContent = "Não existem tickets de suporte.";
+            return;
+        }
+
+        list.className = "";
+        list.innerHTML = tickets.slice(0, 6).map(function (ticket) {
+            return '<button type="button" data-ticket="' + ticket.id + '" style="display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);background:transparent;padding:12px 4px;cursor:pointer">' +
+                '<b>#' + ticket.id + ' · ' + escapeHtml(ticket.topic) + '</b><br>' +
+                '<small>' + escapeHtml(ticket.name) + ' · ' + escapeHtml(labels[ticket.status] || ticket.status) + '</small></button>';
+        }).join("");
+
+        list.querySelectorAll("[data-ticket]").forEach(function (button) {
+            button.addEventListener("click", async function () {
+                detail.style.display = "block";
+                detail.textContent = "A carregar ticket...";
+                try {
+                    const ticket = await loadTicket(button.dataset.ticket);
+                    if (!ticket) return;
+                    renderDetail(ticket);
+                } catch (_) {
+                    detail.textContent = "Não foi possível carregar o ticket.";
+                }
+            });
+        });
+    }
+
+    function renderDetail(ticket) {
+        detail.innerHTML =
+            "<strong>#" + escapeHtml(ticket.id) + " · " + escapeHtml(ticket.topic) + "</strong><br>" +
+            "<span>Cliente: " + escapeHtml(ticket.name) + "</span><br>" +
+            "<span>Contacto: " + escapeHtml(ticket.contact) + "</span><br>" +
+            "<span>Estado: " + escapeHtml(labels[ticket.status] || ticket.status) + "</span><br><br>" +
+            "<span>" + escapeHtml(ticket.message) + "</span>" +
+            '<div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">' +
+            ["assigned","in_progress","waiting_client","resolved","closed"].map(function (status) {
+                return '<button type="button" data-status="' + status + '">' + labels[status] + "</button>";
+            }).join("") +
+            "</div>";
+
+        detail.querySelectorAll("[data-status]").forEach(function (button) {
+            button.addEventListener("click", async function () {
+                button.disabled = true;
+                try {
+                    const response = await fetch(base + "/admin/support/" + ticket.id, {
+                        method: "PATCH",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-Company-Token": token
+                        },
+                        body: JSON.stringify({status: button.dataset.status})
+                    });
+                    if (response.status === 401 || response.status === 403) {
+                        sessionStorage.removeItem("kamba_company_token");
+                        sessionStorage.removeItem("kamba_company_user");
+                        window.location.href = "cabine-login.html";
+                        return;
+                    }
+                    if (!response.ok) throw new Error();
+                    const result = await response.json();
+                    renderDetail(result.ticket);
+                    await loadTickets();
+                } catch (_) {
+                    button.disabled = false;
+                    alert("Não foi possível atualizar o estado do ticket.");
+                }
+            });
+        });
+    }
+
+    try {
+        await loadTickets();
+    } catch (_) {
+        list.className = "cabin-empty";
+        list.textContent = "Não foi possível carregar o atendimento.";
+    }
+})();
+</script>
+<script>
+(async function () {
+    const token = sessionStorage.getItem("kamba_company_token");
+    const audit = document.getElementById("auditoria");
+    if (!token || !audit) return;
+
+    function apiBase() {
+        if (window.KAMBA_API) return window.KAMBA_API.replace(/\/$/, "");
+        if (["localhost", "127.0.0.1"].includes(window.location.hostname)) return "http://127.0.0.1:5000/api";
+        return "";
+    }
+
+    const base = apiBase();
+    if (!base) return;
+
+    try {
+        const response = await fetch(base + "/admin/audit", {
+            headers: {"X-Company-Token": token}
+        });
+
+        if (response.status === 401 || response.status === 403) {
+            sessionStorage.removeItem("kamba_company_token");
+            sessionStorage.removeItem("kamba_company_user");
+            window.location.href = "cabine-login.html";
+            return;
+        }
+
+        if (!response.ok) throw new Error();
+
+        const logs = await response.json();
+        const box = audit.parentElement;
+        if (!logs.length) {
+            box.insertAdjacentHTML("beforeend", '<div class="cabin-empty" style="margin-top:12px">Ainda não existem ações registadas.</div>');
+            return;
+        }
+
+        const rows = logs.slice(0, 20).map(function (log) {
+            return '<div class="cabin-empty" style="margin-top:8px;text-align:left">' +
+                '<b>' + String(log.user_name || "Equipa").replace(/[&<>"']/g, "") + '</b> · ' +
+                String(log.action || "").replace(/[&<>"']/g, "") + '<br>' +
+                '<span>' + String(log.entity || "").replace(/[&<>"']/g, "") + ' #' +
+                String(log.entity_id ?? "").replace(/[&<>"']/g, "") + '</span><br>' +
+                '<small>' + String(log.details || "").replace(/[&<>"']/g, "") + ' · ' +
+                String(log.created_at || "").replace(/[&<>"']/g, "") + '</small>' +
+                '</div>';
+        }).join("");
+
+        box.insertAdjacentHTML("beforeend", '<div style="margin-top:12px"><b>Últimas ações</b>' + rows + '</div>');
+    } catch (_) {
+        // A cabine continua utilizável se a auditoria estiver temporariamente indisponível.
+    }
+})();
+</script>
+</body>
+</html>

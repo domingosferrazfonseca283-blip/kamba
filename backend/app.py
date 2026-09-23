@@ -1,6 +1,6 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-from models import db, User, ServiceRequest, Proposal, Contract, Review, CompanyAccess, CompanySession, SupportTicket
+from models import db, User, ServiceRequest, Proposal, Contract, Review, CompanyAccess, CompanySession, SupportTicket, AuditLog
 from sqlalchemy import func
 import os
 import secrets
@@ -30,7 +30,10 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 CORS(app)
 db.init_app(app)
 
-MASTER_KEY = os.environ.get("KAMBA_MASTER_KEY", "KAMBA_MASTER_2026")
+MASTER_KEY = os.environ.get("KAMBA_MASTER_KEY")
+
+if not MASTER_KEY:
+    raise RuntimeError("KAMBA_MASTER_KEY não configurada. Defina esta variável de ambiente antes de iniciar o backend.")
 
 
 with app.app_context():
@@ -702,14 +705,18 @@ def list_professional_reviews(professional_id):
 
 @app.get("/api/admin/reviews")
 def admin_reviews():
-    phone = request.headers.get("X-Admin-Phone", "").strip()
+    session = get_company_session()
 
-    user = User.query.filter_by(phone=phone).first()
+    if not session:
+        return jsonify({"error": "Sessão empresarial inválida ou expirada."}), 403
 
-    if not user or user.role not in ["admin", "team"]:
-        return jsonify({
-            "error": "Acesso não autorizado."
-        }), 403
+    user = company_access_allows(
+        session,
+        {"administracao", "operacoes", "atendimento", "suporte", "support"}
+    )
+
+    if not user:
+        return jsonify({"error": "Acesso não autorizado para esta área."}), 403
 
     reviews = Review.query.order_by(
         Review.id.desc()
@@ -727,11 +734,11 @@ def admin_stats():
             "error": "Sessão empresarial inválida ou expirada."
         }), 403
 
-    user = User.query.get(session.user_id)
+    user = company_access_allows(session, {"administracao", "operacoes"})
 
-    if not user or user.role not in ["admin", "team"]:
+    if not user:
         return jsonify({
-            "error": "Acesso não autorizado."
+            "error": "Acesso não autorizado para esta área."
         }), 403
 
     total_users = User.query.count()
@@ -787,11 +794,11 @@ def admin_monthly():
             "error": "Sessão empresarial inválida ou expirada."
         }), 403
 
-    user = User.query.get(session.user_id)
+    user = company_access_allows(session, {"administracao", "financeiro"})
 
-    if not user or user.role not in ["admin", "team"]:
+    if not user:
         return jsonify({
-            "error": "Acesso não autorizado."
+            "error": "Acesso não autorizado para esta área."
         }), 403
 
     rows = []
@@ -854,6 +861,140 @@ def create_support_ticket():
         "message": "Pedido de suporte criado com sucesso.",
         "ticket": ticket.to_dict(),
     }), 201
+
+
+@app.get("/api/admin/support")
+def admin_support():
+    session = get_company_session()
+
+    if not session:
+        return jsonify({
+            "error": "Sessão empresarial inválida ou expirada."
+        }), 403
+
+    user = User.query.get(session.user_id)
+
+    if not user or user.role not in ["admin", "team"]:
+        return jsonify({
+            "error": "Acesso não autorizado."
+        }), 403
+
+    tickets = SupportTicket.query.order_by(
+        SupportTicket.id.desc()
+    ).all()
+
+    return jsonify([x.to_dict() for x in tickets])
+
+
+@app.get("/api/admin/support/<int:ticket_id>")
+def admin_get_support_ticket(ticket_id):
+    session = get_company_session()
+
+    if not session:
+        return jsonify({"error": "Sessão empresarial inválida ou expirada."}), 403
+
+    user = company_access_allows(session, {"atendimento", "suporte", "support"})
+
+    if not user:
+        return jsonify({"error": "Acesso não autorizado para esta área."}), 403
+
+    ticket = SupportTicket.query.get_or_404(ticket_id)
+    return jsonify(ticket.to_dict())
+
+
+def company_access_allows(session, areas):
+    user = User.query.get(session.user_id)
+
+    if not user or user.role not in ["admin", "team"]:
+        return None
+
+    if user.role == "admin":
+        return user
+
+    access = CompanyAccess.query.filter_by(
+        user_id=user.id,
+        active=True
+    ).first()
+
+    if not access:
+        return None
+
+    area = (access.area or "").strip().lower()
+    allowed = {str(value).strip().lower() for value in areas}
+
+    if area not in allowed:
+        return None
+
+    return user
+
+
+def create_audit_log(user_id, action, entity, entity_id=None, details=""):
+    entry = AuditLog(
+        user_id=user_id,
+        action=action,
+        entity=entity,
+        entity_id=entity_id,
+        details=details,
+    )
+    db.session.add(entry)
+    return entry
+
+
+@app.patch("/api/admin/support/<int:ticket_id>")
+def admin_update_support_ticket(ticket_id):
+    session = get_company_session()
+
+    if not session:
+        return jsonify({"error": "Sessão empresarial inválida ou expirada."}), 403
+
+    user = company_access_allows(session, {"atendimento", "suporte", "support"})
+
+    if not user:
+        return jsonify({"error": "Acesso não autorizado para esta área."}), 403
+
+    ticket = SupportTicket.query.get_or_404(ticket_id)
+    data = request.get_json(silent=True) or {}
+    status = str(data.get("status", "")).strip().lower()
+
+    allowed = {"open", "assigned", "in_progress", "waiting_client", "resolved", "closed"}
+
+    if status not in allowed:
+        return jsonify({
+            "error": "Estado de ticket inválido.",
+            "allowed": sorted(allowed)
+        }), 400
+
+    previous_status = ticket.status
+    ticket.status = status
+    create_audit_log(
+        user.id,
+        "support_status_changed",
+        "support_ticket",
+        ticket.id,
+        "Estado: %s -> %s" % (previous_status, status),
+    )
+    db.session.commit()
+
+    return jsonify({
+        "message": "Estado do ticket atualizado.",
+        "ticket": ticket.to_dict()
+    })
+
+
+@app.get("/api/admin/audit")
+def admin_audit():
+    session = get_company_session()
+
+    if not session:
+        return jsonify({"error": "Sessão empresarial inválida ou expirada."}), 403
+
+    user = company_access_allows(session, {"administracao", "seguranca", "rh"})
+
+    if not user:
+        return jsonify({"error": "Acesso não autorizado para esta área."}), 403
+
+    logs = AuditLog.query.order_by(AuditLog.id.desc()).limit(100).all()
+    return jsonify([log.to_dict() for log in logs])
 
 
 @app.get("/api/support/<int:ticket_id>")

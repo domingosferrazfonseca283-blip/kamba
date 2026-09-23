@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="pt-AO">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Entrar — Cabine Kamba</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="css/style.css">
+<style>
+.login-page{min-height:100vh;display:grid;grid-template-columns:1fr 460px;background:var(--paper)}
+.login-intro{background:var(--dark);color:#fff;padding:clamp(35px,7vw,90px);display:flex;flex-direction:column;justify-content:center;position:relative;overflow:hidden}
+.login-intro:after{content:"";position:absolute;width:520px;height:520px;border-radius:50%;right:-260px;bottom:-280px;background:rgba(185,232,111,.1)}
+.login-intro>*{position:relative;z-index:1}.login-brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:22px;margin-bottom:70px}.login-mark{display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:var(--green);color:#fff}.login-intro h1{font-size:clamp(42px,5vw,64px);max-width:620px;margin:0 0 20px}.login-intro h1 span{color:var(--lime)}.login-intro p{max-width:540px;color:#c5d7cd;font-size:16px}.login-points{display:grid;gap:12px;margin-top:28px}.login-point{display:flex;gap:10px;align-items:center;color:#dcebe2;font-size:13px}.login-point i{font-style:normal;color:#a9edbd}
+.login-box{display:flex;align-items:center;justify-content:center;padding:28px}.login-card{width:min(390px,100%);background:#fff;border:1px solid var(--line);border-radius:22px;padding:30px;box-shadow:var(--shadow)}.login-card h2{font-size:28px;margin:0 0 7px}.login-card>p{font-size:13px;margin:0 0 24px}.login-form{display:grid;gap:9px}.login-form label{font-size:12px;font-weight:800}.login-form input{width:100%;border:1px solid var(--line);border-radius:11px;padding:12px 13px;outline:0}.login-form input:focus{border-color:#9bc9ae;box-shadow:0 0 0 3px rgba(8,116,67,.08)}.login-form button{margin-top:7px;width:100%}.login-warning{margin-top:16px;padding:13px;border-radius:11px;background:#f7faf8;color:var(--muted);font-size:11px;line-height:1.5}.login-back{display:inline-block;margin-top:18px;color:var(--green);font-size:12px;font-weight:800}.login-error{display:none;margin-bottom:12px;padding:11px;border-radius:10px;background:#fff4f4;color:#a33;font-size:12px}
+@media(max-width:800px){.login-page{grid-template-columns:1fr}.login-intro{min-height:330px;padding:32px 24px}.login-brand{margin-bottom:38px}.login-intro h1{font-size:42px}.login-box{padding:24px 16px}}
+</style>
+</head>
+<body>
+<main class="login-page">
+<section class="login-intro">
+<div class="login-brand"><span class="login-mark">K</span><span>Kamba</span></div>
+<div>
+<span class="eyebrow" style="color:#a9edbd">Área interna</span>
+<h1>Cabine de suporte <span>e operações.</span></h1>
+<p>O ponto de entrada da equipa Kamba para atendimento, operações, comunicação e controlo interno.</p>
+<div class="login-points">
+<div class="login-point"><i>✓</i><span>Acesso individual por membro da equipa</span></div>
+<div class="login-point"><i>✓</i><span>Permissões definidas por função</span></div>
+<div class="login-point"><i>✓</i><span>Ações preparadas para auditoria</span></div>
+</div>
+</div>
+</section>
+
+<section class="login-box">
+<div class="login-card">
+<h2>Entrar na cabine</h2>
+<p>Usa as credenciais internas fornecidas pela Kamba.</p>
+
+<div id="loginError" class="login-error">A autenticação ainda será ligada ao backend.</div>
+
+<form class="login-form" id="teamLoginForm">
+<label for="email">Email profissional</label>
+<input id="email" name="email" type="email" autocomplete="username" placeholder="Email profissional" required>
+
+<label for="key">Chave de acesso</label>
+<input id="key" name="key" type="password" autocomplete="current-password" placeholder="Chave de acesso" required>
+
+<button class="btn primary" type="submit">Entrar na cabine</button>
+</form>
+
+<div class="login-warning">
+<strong>Acesso restrito.</strong><br>
+Esta interface não autentica credenciais no navegador. A validação real será feita pelo backend Kamba, com sessão e permissões do utilizador.
+</div>
+
+<a class="login-back" href="index.html">← Voltar ao site público</a>
+</div>
+</section>
+</main>
+<script>
+const form = document.getElementById("teamLoginForm");
+const errorBox = document.getElementById("loginError");
+
+function apiBase() {
+    if (window.KAMBA_API) return window.KAMBA_API.replace(/\\/$/, "");
+    if (["localhost", "127.0.0.1"].includes(window.location.hostname)) {
+        return "http://127.0.0.1:5000/api";
+    }
+    return "";
+}
+
+form.addEventListener("submit", async function(event) {
+    event.preventDefault();
+    errorBox.style.display = "none";
+
+    const base = apiBase();
+    if (!base) {
+        errorBox.textContent = "A API Kamba ainda não está configurada para este endereço do site.";
+        errorBox.style.display = "block";
+        return;
+    }
+
+    const email = document.getElementById("email").value.trim();
+    const key = document.getElementById("key").value;
+
+    try {
+        const response = await fetch(base + "/admin/company-login", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({email, key})
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok || !data.token) {
+            throw new Error(data.error || "Não foi possível iniciar a sessão.");
+        }
+
+        sessionStorage.setItem("kamba_company_token", data.token);
+        sessionStorage.setItem("kamba_company_user", JSON.stringify({
+            id: data.id,
+            name: data.name,
+            email: data.email,
+            role: data.role,
+            area: data.area,
+            is_admin: data.is_admin
+        }));
+
+        window.location.href = "cabine.html";
+    } catch (error) {
+        errorBox.textContent = error.message;
+        errorBox.style.display = "block";
+    }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ambientes virtuais
+.venv/
+venv/
+env/
+
+# Bases de dados locais
+instance/
+*.db
+*.sqlite
+*.sqlite3
+
+# Backups locais
+*.backup
+*.backup2
+*.backup_contract
+
+# Android / Gradle
+.gradle/
+build/
+app/build/
+local.properties
+
+# IDE
+.idea/
+*.iml

@@ -30,8 +30,16 @@ class ServiceRequest(db.Model):
     def to_dict(self):
         return {
             k: getattr(self, k)
-            for k in ["id", "client_id", "service", "description", "location",
-                      "budget", "date", "status"]
+            for k in [
+                "id",
+                "client_id",
+                "service",
+                "description",
+                "location",
+                "budget",
+                "date",
+                "status"
+            ]
         }
 
 
@@ -47,8 +55,14 @@ class Proposal(db.Model):
     def to_dict(self):
         return {
             k: getattr(self, k)
-            for k in ["id", "request_id", "professional_id", "price",
-                      "message", "status"]
+            for k in [
+                "id",
+                "request_id",
+                "professional_id",
+                "price",
+                "message",
+                "status"
+            ]
         }
 
 
@@ -65,10 +79,87 @@ class Contract(db.Model):
     def to_dict(self):
         return {
             k: getattr(self, k)
-            for k in ["id", "request_id", "proposal_id", "client_id",
-                      "professional_id", "price", "status"]
+            for k in [
+                "id",
+                "request_id",
+                "proposal_id",
+                "client_id",
+                "professional_id",
+                "price",
+                "status"
+            ]
         }
 
+
+class Review(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    contract_id = db.Column(db.Integer, nullable=False, unique=True)
+    client_id = db.Column(db.Integer, nullable=False)
+    professional_id = db.Column(db.Integer, nullable=False)
+    rating = db.Column(db.Integer, nullable=False)
+    comment = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        client = User.query.get(self.client_id)
+        professional = User.query.get(self.professional_id)
+
+        return {
+            "id": self.id,
+            "contract_id": self.contract_id,
+            "client_id": self.client_id,
+            "client_name": client.name if client else None,
+            "professional_id": self.professional_id,
+            "professional_name": professional.name if professional else None,
+            "rating": self.rating,
+            "comment": self.comment or "",
+            "created_at": self.created_at.isoformat() if self.created_at else None
+        }
+
+
+class CompanyAccess(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("user.id"),
+        nullable=False,
+        unique=True
+    )
+    area = db.Column(db.String(60), nullable=False)
+    key_hash = db.Column(db.String(255), nullable=False)
+    active = db.Column(db.Boolean, default=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow
+    )
+
+    user = db.relationship(
+        "User",
+        backref=db.backref(
+            "company_access",
+            uselist=False
+        )
+    )
+
+
+class CompanySession(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("user.id"),
+        nullable=False
+    )
+    token_hash = db.Column(db.String(255), nullable=False, unique=True)
+    active = db.Column(db.Boolean, default=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    expires_at = db.Column(db.DateTime, nullable=False)
+
+    user = db.relationship(
+        "User",
+        backref=db.backref("company_sessions", lazy=True)
+    )
 
 class SupportTicket(db.Model):
     id = db.Column(db.Integer, primary_key=True)

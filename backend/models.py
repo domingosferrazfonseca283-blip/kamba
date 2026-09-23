@@ -144,6 +144,42 @@ class CompanyAccess(db.Model):
     )
 
 
+class AuthSession(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("user.id"),
+        nullable=False
+    )
+    token_hash = db.Column(
+        db.String(255),
+        nullable=False,
+        unique=True
+    )
+    active = db.Column(
+        db.Boolean,
+        default=True,
+        nullable=False
+    )
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow
+    )
+    expires_at = db.Column(
+        db.DateTime,
+        nullable=False
+    )
+    revoked_at = db.Column(db.DateTime)
+
+    user = db.relationship(
+        "User",
+        backref=db.backref(
+            "auth_sessions",
+            lazy=True
+        )
+    )
+
+
 class CompanySession(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(

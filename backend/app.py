@@ -1,7 +1,18 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_migrate import Migrate
-from models import db, User, ServiceRequest, Proposal, Contract, Review, CompanyAccess, CompanySession, SupportTicket
+from models import (
+    db,
+    User,
+    ServiceRequest,
+    Proposal,
+    Contract,
+    Review,
+    CompanyAccess,
+    CompanySession,
+    AuthSession,
+    SupportTicket
+)
 from sqlalchemy import func
 import os
 import secrets
@@ -52,6 +63,70 @@ def user_dict(user):
         "specialty": user.specialty,
         "rating": user.rating or 0
     }
+
+
+def hash_token(token):
+    return hashlib.sha256(
+        token.encode("utf-8")
+    ).hexdigest()
+
+
+def create_auth_session(user):
+    token = secrets.token_urlsafe(32)
+
+    session = AuthSession(
+        user_id=user.id,
+        token_hash=hash_token(token),
+        active=True,
+        expires_at=datetime.utcnow() + timedelta(days=30)
+    )
+
+    db.session.add(session)
+    db.session.commit()
+
+    return token, session
+
+
+def get_auth_session():
+    authorization = request.headers.get(
+        "Authorization",
+        ""
+    ).strip()
+
+    if not authorization:
+        return None
+
+    parts = authorization.split(None, 1)
+
+    if len(parts) != 2:
+        return None
+
+    scheme, token = parts
+
+    if scheme.lower() != "bearer" or not token.strip():
+        return None
+
+    session = AuthSession.query.filter_by(
+        token_hash=hash_token(token.strip()),
+        active=True
+    ).first()
+
+    if not session:
+        return None
+
+    now = datetime.utcnow()
+
+    if session.revoked_at is not None:
+        session.active = False
+        db.session.commit()
+        return None
+
+    if session.expires_at <= now:
+        session.active = False
+        db.session.commit()
+        return None
+
+    return session
 
 
 @app.get("/api/health")
@@ -117,14 +192,19 @@ def create_user():
 @app.post("/api/login")
 def login():
     data = request.get_json(silent=True) or {}
-    phone = str(data.get("phone", "")).strip()
+
+    phone = str(
+        data.get("phone", "")
+    ).strip()
 
     if not phone:
         return jsonify({
             "error": "Número de telefone obrigatório."
         }), 400
 
-    user = User.query.filter_by(phone=phone).first()
+    user = User.query.filter_by(
+        phone=phone
+    ).first()
 
     if not user:
         return jsonify({
@@ -136,7 +216,52 @@ def login():
             "error": "Esta conta pertence à área empresarial."
         }), 403
 
-    return jsonify(user_dict(user)), 200
+    token, session = create_auth_session(user)
+
+    return jsonify({
+        "token": token,
+        "token_type": "Bearer",
+        "expires_at": session.expires_at.isoformat(),
+        "user": user_dict(user)
+    }), 200
+
+
+@app.get("/api/me")
+def me():
+    session = get_auth_session()
+
+    if not session:
+        return jsonify({
+            "error": "Não autenticado."
+        }), 401
+
+    return jsonify({
+        "user": user_dict(session.user),
+        "session": {
+            "id": session.id,
+            "expires_at": session.expires_at.isoformat()
+        }
+    }), 200
+
+
+@app.post("/api/logout")
+def logout():
+    session = get_auth_session()
+
+    if not session:
+        return jsonify({
+            "error": "Não autenticado."
+        }), 401
+
+    session.active = False
+    session.revoked_at = datetime.utcnow()
+
+    db.session.commit()
+
+    return jsonify({
+        "ok": True,
+        "message": "Sessão encerrada."
+    }), 200
 
 
 def get_company_session():

@@ -1,6 +1,6 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-from models import db, User, ServiceRequest, Proposal, Contract, Review, CompanyAccess, CompanySession, SupportTicket
+from models import db, User, ServiceRequest, Proposal, Contract, Review, CompanyAccess, CompanySession, SupportTicket, AuditLog
 from sqlalchemy import func
 import os
 import secrets
@@ -30,7 +30,10 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 CORS(app)
 db.init_app(app)
 
-MASTER_KEY = os.environ.get("KAMBA_MASTER_KEY", "KAMBA_MASTER_2026")
+MASTER_KEY = os.environ.get("KAMBA_MASTER_KEY")
+
+if not MASTER_KEY:
+    raise RuntimeError("KAMBA_MASTER_KEY não configurada. Defina esta variável de ambiente antes de iniciar o backend.")
 
 
 with app.app_context():
@@ -886,13 +889,39 @@ def admin_get_support_ticket(ticket_id):
     if not session:
         return jsonify({"error": "Sessão empresarial inválida ou expirada."}), 403
 
-    user = User.query.get(session.user_id)
+    user = company_access_allows(session, {"atendimento", "suporte", "support"})
 
-    if not user or user.role not in ["admin", "team"]:
-        return jsonify({"error": "Acesso não autorizado."}), 403
+    if not user:
+        return jsonify({"error": "Acesso não autorizado para esta área."}), 403
 
     ticket = SupportTicket.query.get_or_404(ticket_id)
     return jsonify(ticket.to_dict())
+
+
+def company_access_allows(session, areas):
+    user = User.query.get(session.user_id)
+
+    if not user or user.role not in ["admin", "team"]:
+        return None
+
+    if user.role == "admin":
+        return user
+
+    access = CompanyAccess.query.filter_by(
+        user_id=user.id,
+        active=True
+    ).first()
+
+    if not access:
+        return None
+
+    area = (access.area or "").strip().lower()
+    allowed = {str(value).strip().lower() for value in areas}
+
+    if area not in allowed:
+        return None
+
+    return user
 
 
 def create_audit_log(user_id, action, entity, entity_id=None, details=""):
@@ -914,10 +943,10 @@ def admin_update_support_ticket(ticket_id):
     if not session:
         return jsonify({"error": "Sessão empresarial inválida ou expirada."}), 403
 
-    user = User.query.get(session.user_id)
+    user = company_access_allows(session, {"atendimento", "suporte", "support"})
 
-    if not user or user.role not in ["admin", "team"]:
-        return jsonify({"error": "Acesso não autorizado."}), 403
+    if not user:
+        return jsonify({"error": "Acesso não autorizado para esta área."}), 403
 
     ticket = SupportTicket.query.get_or_404(ticket_id)
     data = request.get_json(silent=True) or {}
@@ -955,10 +984,10 @@ def admin_audit():
     if not session:
         return jsonify({"error": "Sessão empresarial inválida ou expirada."}), 403
 
-    user = User.query.get(session.user_id)
+    user = company_access_allows(session, {"atendimento", "suporte", "support"})
 
-    if not user or user.role not in ["admin", "team"]:
-        return jsonify({"error": "Acesso não autorizado."}), 403
+    if not user:
+        return jsonify({"error": "Acesso não autorizado para esta área."}), 403
 
     logs = AuditLog.query.order_by(AuditLog.id.desc()).limit(100).all()
     return jsonify([log.to_dict() for log in logs])

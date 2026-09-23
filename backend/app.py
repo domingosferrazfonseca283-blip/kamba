@@ -705,14 +705,18 @@ def list_professional_reviews(professional_id):
 
 @app.get("/api/admin/reviews")
 def admin_reviews():
-    phone = request.headers.get("X-Admin-Phone", "").strip()
+    session = get_company_session()
 
-    user = User.query.filter_by(phone=phone).first()
+    if not session:
+        return jsonify({"error": "Sessão empresarial inválida ou expirada."}), 403
 
-    if not user or user.role not in ["admin", "team"]:
-        return jsonify({
-            "error": "Acesso não autorizado."
-        }), 403
+    user = company_access_allows(
+        session,
+        {"administracao", "operacoes", "atendimento", "suporte", "support"}
+    )
+
+    if not user:
+        return jsonify({"error": "Acesso não autorizado para esta área."}), 403
 
     reviews = Review.query.order_by(
         Review.id.desc()
@@ -730,11 +734,11 @@ def admin_stats():
             "error": "Sessão empresarial inválida ou expirada."
         }), 403
 
-    user = User.query.get(session.user_id)
+    user = company_access_allows(session, {"administracao", "operacoes"})
 
-    if not user or user.role not in ["admin", "team"]:
+    if not user:
         return jsonify({
-            "error": "Acesso não autorizado."
+            "error": "Acesso não autorizado para esta área."
         }), 403
 
     total_users = User.query.count()
@@ -790,11 +794,11 @@ def admin_monthly():
             "error": "Sessão empresarial inválida ou expirada."
         }), 403
 
-    user = User.query.get(session.user_id)
+    user = company_access_allows(session, {"administracao", "financeiro"})
 
-    if not user or user.role not in ["admin", "team"]:
+    if not user:
         return jsonify({
-            "error": "Acesso não autorizado."
+            "error": "Acesso não autorizado para esta área."
         }), 403
 
     rows = []
@@ -984,7 +988,7 @@ def admin_audit():
     if not session:
         return jsonify({"error": "Sessão empresarial inválida ou expirada."}), 403
 
-    user = company_access_allows(session, {"atendimento", "suporte", "support"})
+    user = company_access_allows(session, {"administracao", "seguranca", "rh"})
 
     if not user:
         return jsonify({"error": "Acesso não autorizado para esta área."}), 403

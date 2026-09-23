@@ -895,6 +895,18 @@ def admin_get_support_ticket(ticket_id):
     return jsonify(ticket.to_dict())
 
 
+def create_audit_log(user_id, action, entity, entity_id=None, details=""):
+    entry = AuditLog(
+        user_id=user_id,
+        action=action,
+        entity=entity,
+        entity_id=entity_id,
+        details=details,
+    )
+    db.session.add(entry)
+    return entry
+
+
 @app.patch("/api/admin/support/<int:ticket_id>")
 def admin_update_support_ticket(ticket_id):
     session = get_company_session()
@@ -919,13 +931,37 @@ def admin_update_support_ticket(ticket_id):
             "allowed": sorted(allowed)
         }), 400
 
+    previous_status = ticket.status
     ticket.status = status
+    create_audit_log(
+        user.id,
+        "support_status_changed",
+        "support_ticket",
+        ticket.id,
+        "Estado: %s -> %s" % (previous_status, status),
+    )
     db.session.commit()
 
     return jsonify({
         "message": "Estado do ticket atualizado.",
         "ticket": ticket.to_dict()
     })
+
+
+@app.get("/api/admin/audit")
+def admin_audit():
+    session = get_company_session()
+
+    if not session:
+        return jsonify({"error": "Sessão empresarial inválida ou expirada."}), 403
+
+    user = User.query.get(session.user_id)
+
+    if not user or user.role not in ["admin", "team"]:
+        return jsonify({"error": "Acesso não autorizado."}), 403
+
+    logs = AuditLog.query.order_by(AuditLog.id.desc()).limit(100).all()
+    return jsonify([log.to_dict() for log in logs])
 
 
 @app.get("/api/support/<int:ticket_id>")

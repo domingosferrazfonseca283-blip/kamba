@@ -1046,18 +1046,28 @@ def list_client_contracts(client_id):
 
 @app.post("/api/contracts/<int:contract_id>/review")
 def create_review(contract_id):
+    session = get_auth_session()
+    if not session:
+        return jsonify({
+            "error": "Não autenticado."
+        }), 401
+
+    user = session.user
+    if not user:
+        return jsonify({
+            "error": "Utilizador da sessão não encontrado."
+        }), 401
+
+    if user.role != "client":
+        return jsonify({
+            "error": "Apenas clientes podem avaliar contratos."
+        }), 403
+
     data = request.get_json(silent=True) or {}
 
     contract = Contract.query.get_or_404(contract_id)
 
-    client_id = data.get("client_id")
-
-    if client_id is None:
-        return jsonify({
-            "error": "Cliente obrigatório."
-        }), 400
-
-    if int(client_id) != contract.client_id:
+    if contract.client_id != user.id:
         return jsonify({
             "error": "Este cliente não pode avaliar este contrato."
         }), 403

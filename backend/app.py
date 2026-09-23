@@ -984,8 +984,30 @@ def update_contract_status(contract_id):
 
 @app.get("/api/contracts/professional/<int:professional_id>")
 def list_professional_contracts(professional_id):
+    session = get_auth_session()
+    if not session:
+        return jsonify({
+            "error": "Não autenticado."
+        }), 401
+
+    user = session.user
+    if not user:
+        return jsonify({
+            "error": "Utilizador da sessão não encontrado."
+        }), 401
+
+    if user.role != "professional":
+        return jsonify({
+            "error": "Apenas profissionais podem consultar os seus contratos."
+        }), 403
+
+    if professional_id != user.id:
+        return jsonify({
+            "error": "Não tens permissão para consultar estes contratos."
+        }), 403
+
     items = Contract.query.filter_by(
-        professional_id=professional_id
+        professional_id=user.id
     ).order_by(Contract.id.desc()).all()
 
     return jsonify([x.to_dict() for x in items])

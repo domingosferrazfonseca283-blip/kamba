@@ -425,10 +425,23 @@ def services():
 
 @app.post("/api/requests")
 def create_request():
+    session = get_auth_session()
+
+    if not session:
+        return jsonify({
+            "error": "Não autenticado."
+        }), 401
+
+    user = session.user
+
+    if not user or user.role != "client":
+        return jsonify({
+            "error": "Apenas clientes podem criar pedidos."
+        }), 403
+
     data = request.get_json(silent=True) or {}
 
     required = [
-        "client_id",
         "service",
         "description",
         "location"
@@ -443,10 +456,10 @@ def create_request():
         }), 400
 
     item = ServiceRequest(
-        client_id=data["client_id"],
-        service=data["service"],
-        description=data["description"],
-        location=data["location"],
+        client_id=user.id,
+        service=str(data["service"]).strip(),
+        description=str(data["description"]).strip(),
+        location=str(data["location"]).strip(),
         budget=data.get("budget"),
         date=data.get("date"),
         status="open"

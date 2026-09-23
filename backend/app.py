@@ -878,27 +878,79 @@ def get_contract(contract_id):
 
 @app.patch("/api/contracts/<int:contract_id>/status")
 def update_contract_status(contract_id):
+    session = get_auth_session()
+    if not session:
+        return jsonify({
+            "error": "Não autenticado."
+        }), 401
+
+    user = session.user
+    if not user:
+        return jsonify({
+            "error": "Utilizador da sessão não encontrado."
+        }), 401
+
     contract = Contract.query.get_or_404(contract_id)
+
+    if user.role == "client":
+        if contract.client_id != user.id:
+            return jsonify({
+                "error": "Não tens permissão para alterar este contrato."
+            }), 403
+    elif user.role == "professional":
+        if contract.professional_id != user.id:
+            return jsonify({
+                "error": "Não tens permissão para alterar este contrato."
+            }), 403
+    else:
+        return jsonify({
+            "error": "Não tens permissão para alterar contratos."
+        }), 403
 
     data = request.get_json(silent=True) or {}
     status = str(data.get("status", "")).strip()
 
-    allowed = [
+    allowed = {
         "active",
         "in_progress",
         "completed",
         "cancelled",
         "disputed"
-    ]
+    }
 
     if status not in allowed:
         return jsonify({
             "error": "Estado de contrato inválido."
         }), 400
 
-    if contract.status == "completed":
+    terminal_statuses = {
+        "completed",
+        "cancelled",
+        "disputed"
+    }
+
+    if contract.status in terminal_statuses:
         return jsonify({
-            "error": "Este contrato já foi concluído."
+            "error": "Este contrato já está encerrado."
+        }), 409
+
+    transitions = {
+        "client": {
+            "active": {"cancelled", "disputed"},
+            "in_progress": {"completed", "cancelled", "disputed"}
+        },
+        "professional": {
+            "active": {"in_progress", "cancelled", "disputed"},
+            "in_progress": {"cancelled", "disputed"}
+        }
+    }
+
+    role_transitions = transitions.get(user.role, {})
+    current_transitions = role_transitions.get(contract.status, set())
+
+    if status not in current_transitions:
+        return jsonify({
+            "error": "Esta transição de estado não é permitida para este utilizador."
         }), 409
 
     contract.status = status
@@ -908,12 +960,21 @@ def update_contract_status(contract_id):
     )
 
     if request_item:
-        if status == "completed":
-            request_item.status = "completed"
-        elif status == "cancelled":
-            request_item.status = "cancelled"
+        request_status_map = {
+            "in_progress": "in_progress",
+            "completed": "completed",
+            "cancelled": "cancelled",
+            "disputed": "disputed"
+        }
 
-    db.session.commit()
+        if status in request_status_map:
+            request_item.status = request_status_map[status]
+
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
 
     return jsonify({
         "message": "Estado do contrato atualizado.",

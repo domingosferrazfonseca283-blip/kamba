@@ -40,11 +40,11 @@
 <div id="loginError" class="login-error">A autenticação ainda será ligada ao backend.</div>
 
 <form class="login-form" id="teamLoginForm">
-<label for="identifier">Identificador</label>
-<input id="identifier" name="identifier" type="text" autocomplete="username" placeholder="Identificador da equipa" required>
+<label for="email">Email profissional</label>
+<input id="email" name="email" type="email" autocomplete="username" placeholder="Email profissional" required>
 
-<label for="access">Código de acesso</label>
-<input id="access" name="access" type="password" autocomplete="current-password" placeholder="Código de acesso" required>
+<label for="key">Chave de acesso</label>
+<input id="key" name="key" type="password" autocomplete="current-password" placeholder="Chave de acesso" required>
 
 <button class="btn primary" type="submit">Entrar na cabine</button>
 </form>
@@ -61,7 +61,7 @@ Esta interface não autentica credenciais no navegador. A validação real será
 <script>
 document.getElementById("teamLoginForm").addEventListener("submit", function(event){
     event.preventDefault();
-    document.getElementById("loginError").style.display = "block";
+    document.getElementById("loginError").textContent = "A autenticação será ligada ao endpoint empresarial do backend Kamba."; document.getElementById("loginError").style.display = "block";
 });
 </script>
 </body>

@@ -524,7 +524,45 @@ def list_client_requests(client_id):
 
 @app.get("/api/requests/<int:request_id>/proposals")
 def list_request_proposals(request_id):
+    session = get_auth_session()
+
+    if not session:
+        return jsonify({
+            "error": "Não autenticado."
+        }), 401
+
+    user = session.user
+
+    if not user:
+        return jsonify({
+            "error": "Utilizador da sessão não encontrado."
+        }), 401
+
     request_item = ServiceRequest.query.get_or_404(request_id)
+
+    if user.role == "client":
+        if request_item.client_id != user.id:
+            return jsonify({
+                "error": "Não tens permissão para consultar as propostas deste pedido."
+            }), 403
+
+    elif user.role == "professional":
+        related = Proposal.query.filter_by(
+            request_id=request_item.id,
+            professional_id=user.id
+        ).first()
+
+        if not related:
+            return jsonify({
+                "error": "Não tens permissão para consultar as propostas deste pedido."
+            }), 403
+
+        return jsonify([related.to_dict()])
+
+    else:
+        return jsonify({
+            "error": "Não tens permissão para consultar propostas."
+        }), 403
 
     items = Proposal.query.filter_by(
         request_id=request_item.id

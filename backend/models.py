@@ -216,3 +216,30 @@ class SupportTicket(db.Model):
             "status": self.status,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
+
+
+class AuditLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    action = db.Column(db.String(80), nullable=False)
+    entity = db.Column(db.String(80), nullable=False)
+    entity_id = db.Column(db.Integer, nullable=True)
+    details = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    user = db.relationship(
+        "User",
+        backref=db.backref("audit_logs", lazy=True)
+    )
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "user_name": self.user.name if self.user else None,
+            "action": self.action,
+            "entity": self.entity,
+            "entity_id": self.entity_id,
+            "details": self.details or "",
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }

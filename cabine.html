@@ -323,5 +323,58 @@
     }
 })();
 </script>
+<script>
+(async function () {
+    const token = sessionStorage.getItem("kamba_company_token");
+    const audit = document.getElementById("auditoria");
+    if (!token || !audit) return;
+
+    function apiBase() {
+        if (window.KAMBA_API) return window.KAMBA_API.replace(/\/$/, "");
+        if (["localhost", "127.0.0.1"].includes(window.location.hostname)) return "http://127.0.0.1:5000/api";
+        return "";
+    }
+
+    const base = apiBase();
+    if (!base) return;
+
+    try {
+        const response = await fetch(base + "/admin/audit", {
+            headers: {"X-Company-Token": token}
+        });
+
+        if (response.status === 401 || response.status === 403) {
+            sessionStorage.removeItem("kamba_company_token");
+            sessionStorage.removeItem("kamba_company_user");
+            window.location.href = "cabine-login.html";
+            return;
+        }
+
+        if (!response.ok) throw new Error();
+
+        const logs = await response.json();
+        const box = audit.parentElement;
+        if (!logs.length) {
+            box.insertAdjacentHTML("beforeend", '<div class="cabin-empty" style="margin-top:12px">Ainda não existem ações registadas.</div>');
+            return;
+        }
+
+        const rows = logs.slice(0, 20).map(function (log) {
+            return '<div class="cabin-empty" style="margin-top:8px;text-align:left">' +
+                '<b>' + String(log.user_name || "Equipa").replace(/[&<>"']/g, "") + '</b> · ' +
+                String(log.action || "").replace(/[&<>"']/g, "") + '<br>' +
+                '<span>' + String(log.entity || "").replace(/[&<>"']/g, "") + ' #' +
+                String(log.entity_id ?? "").replace(/[&<>"']/g, "") + '</span><br>' +
+                '<small>' + String(log.details || "").replace(/[&<>"']/g, "") + ' · ' +
+                String(log.created_at || "").replace(/[&<>"']/g, "") + '</small>' +
+                '</div>';
+        }).join("");
+
+        box.insertAdjacentHTML("beforeend", '<div style="margin-top:12px"><b>Últimas ações</b>' + rows + '</div>');
+    } catch (_) {
+        // A cabine continua utilizável se a auditoria estiver temporariamente indisponível.
+    }
+})();
+</script>
 </body>
 </html>

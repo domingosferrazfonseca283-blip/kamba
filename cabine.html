@@ -55,6 +55,7 @@
 </aside>
 
 <main class="cabin-main">
+<div id="sessionGuard" class="cabin-note" style="display:none"><b>Sessão necessária.</b><span>Entra com uma conta da equipa Kamba para aceder à cabine.</span></div>
 <div class="cabin-head">
 <div>
 <h1>Dashboard</h1>
@@ -123,5 +124,27 @@
 </main>
 </div>
 </div>
+<script>
+(function () {
+    const token = sessionStorage.getItem("kamba_company_token");
+    const userRaw = sessionStorage.getItem("kamba_company_user");
+    if (!token || !userRaw) {
+        window.location.href = "cabine-login.html";
+        return;
+    }
+
+    try {
+        const user = JSON.parse(userRaw);
+        const badge = document.querySelector(".cabin-badge");
+        if (badge && user.name) {
+            badge.textContent = (user.area || "Área interna") + " · " + user.name;
+        }
+    } catch (_) {
+        sessionStorage.removeItem("kamba_company_token");
+        sessionStorage.removeItem("kamba_company_user");
+        window.location.href = "cabine-login.html";
+    }
+})();
+</script>
 </body>
 </html>

@@ -587,11 +587,24 @@ def accept_proposal(proposal_id):
 
 @app.post("/api/proposals")
 def create_proposal():
+    session = get_auth_session()
+
+    if not session:
+        return jsonify({
+            "error": "Não autenticado."
+        }), 401
+
+    user = session.user
+
+    if not user or user.role != "professional":
+        return jsonify({
+            "error": "Apenas profissionais podem enviar propostas."
+        }), 403
+
     data = request.get_json(silent=True) or {}
 
     required = [
         "request_id",
-        "professional_id",
         "price"
     ]
 
@@ -606,9 +619,39 @@ def create_proposal():
             "fields": missing
         }), 400
 
+    try:
+        request_id = int(data["request_id"])
+        price = float(data["price"])
+    except (TypeError, ValueError):
+        return jsonify({
+            "error": "request_id e price devem possuir valores válidos."
+        }), 400
+
+    if request_id <= 0:
+        return jsonify({
+            "error": "request_id inválido."
+        }), 400
+
+    if price < 0:
+        return jsonify({
+            "error": "O preço não pode ser negativo."
+        }), 400
+
+    request_item = ServiceRequest.query.get(request_id)
+
+    if not request_item:
+        return jsonify({
+            "error": "Pedido não encontrado."
+        }), 404
+
+    if request_item.status != "open":
+        return jsonify({
+            "error": "Este pedido não está disponível para novas propostas."
+        }), 409
+
     existing = Proposal.query.filter_by(
-        request_id=data["request_id"],
-        professional_id=data["professional_id"]
+        request_id=request_item.id,
+        professional_id=user.id
     ).first()
 
     if existing:
@@ -617,15 +660,19 @@ def create_proposal():
         }), 409
 
     proposal = Proposal(
-        request_id=data["request_id"],
-        professional_id=data["professional_id"],
-        price=data["price"],
-        message=data.get("message", ""),
+        request_id=request_item.id,
+        professional_id=user.id,
+        price=price,
+        message=str(data.get("message", "")).strip(),
         status="pending"
     )
 
-    db.session.add(proposal)
-    db.session.commit()
+    try:
+        db.session.add(proposal)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
 
     return jsonify(proposal.to_dict()), 201
 

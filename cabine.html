@@ -69,10 +69,10 @@
 </div>
 
 <section class="cabin-stats">
-<div class="cabin-stat"><small>Tickets abertos</small><strong>—</strong></div>
-<div class="cabin-stat"><small>Em atendimento</small><strong>—</strong></div>
-<div class="cabin-stat"><small>Pedidos</small><strong>—</strong></div>
-<div class="cabin-stat"><small>Contratos</small><strong>—</strong></div>
+<div class="cabin-stat"><small>Tickets</small><strong id="statTickets">—</strong></div>
+<div class="cabin-stat"><small>Pedidos abertos</small><strong id="statOpen">—</strong></div>
+<div class="cabin-stat"><small>Pedidos</small><strong id="statRequests">—</strong></div>
+<div class="cabin-stat"><small>Contratos</small><strong id="statContracts">—</strong></div>
 </section>
 
 <section class="cabin-grid">
@@ -143,6 +143,46 @@
         sessionStorage.removeItem("kamba_company_token");
         sessionStorage.removeItem("kamba_company_user");
         window.location.href = "cabine-login.html";
+    }
+})();
+</script>
+<script>
+(async function () {
+    const token = sessionStorage.getItem("kamba_company_token");
+    if (!token) return;
+
+    function apiBase() {
+        if (window.KAMBA_API) return window.KAMBA_API.replace(/\\/$/, "");
+        if (["localhost", "127.0.0.1"].includes(window.location.hostname)) {
+            return "http://127.0.0.1:5000/api";
+        }
+        return "";
+    }
+
+    const base = apiBase();
+    if (!base) return;
+
+    try {
+        const response = await fetch(base + "/admin/stats", {
+            headers: {"X-Company-Token": token}
+        });
+
+        if (response.status === 401 || response.status === 403) {
+            sessionStorage.removeItem("kamba_company_token");
+            sessionStorage.removeItem("kamba_company_user");
+            window.location.href = "cabine-login.html";
+            return;
+        }
+
+        if (!response.ok) return;
+
+        const stats = await response.json();
+        document.getElementById("statTickets").textContent = stats.total_support_tickets ?? "—";
+        document.getElementById("statOpen").textContent = stats.requests_open ?? "—";
+        document.getElementById("statRequests").textContent = stats.total_requests ?? "—";
+        document.getElementById("statContracts").textContent = stats.total_contracts ?? "—";
+    } catch (_) {
+        // A cabine continua utilizável mesmo quando a API está indisponível.
     }
 })();
 </script>

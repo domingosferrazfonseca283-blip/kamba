@@ -993,8 +993,30 @@ def list_professional_contracts(professional_id):
 
 @app.get("/api/contracts/client/<int:client_id>")
 def list_client_contracts(client_id):
+    session = get_auth_session()
+    if not session:
+        return jsonify({
+            "error": "Não autenticado."
+        }), 401
+
+    user = session.user
+    if not user:
+        return jsonify({
+            "error": "Utilizador da sessão não encontrado."
+        }), 401
+
+    if user.role != "client":
+        return jsonify({
+            "error": "Apenas clientes podem consultar os seus contratos."
+        }), 403
+
+    if client_id != user.id:
+        return jsonify({
+            "error": "Não tens permissão para consultar estes contratos."
+        }), 403
+
     items = Contract.query.filter_by(
-        client_id=client_id
+        client_id=user.id
     ).order_by(Contract.id.desc()).all()
 
     return jsonify([x.to_dict() for x in items])

@@ -879,6 +879,22 @@ def admin_support():
     return jsonify([x.to_dict() for x in tickets])
 
 
+@app.get("/api/admin/support/<int:ticket_id>")
+def admin_get_support_ticket(ticket_id):
+    session = get_company_session()
+
+    if not session:
+        return jsonify({"error": "Sessão empresarial inválida ou expirada."}), 403
+
+    user = User.query.get(session.user_id)
+
+    if not user or user.role not in ["admin", "team"]:
+        return jsonify({"error": "Acesso não autorizado."}), 403
+
+    ticket = SupportTicket.query.get_or_404(ticket_id)
+    return jsonify(ticket.to_dict())
+
+
 @app.patch("/api/admin/support/<int:ticket_id>")
 def admin_update_support_ticket(ticket_id):
     session = get_company_session()

@@ -1,5 +1,6 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+from flask_migrate import Migrate
 from models import db, User, ServiceRequest, Proposal, Contract, Review, CompanyAccess, CompanySession, SupportTicket
 from sqlalchemy import func
 import os
@@ -29,12 +30,15 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 CORS(app)
 db.init_app(app)
+migrate = Migrate(app, db)
 
-MASTER_KEY = os.environ.get("KAMBA_MASTER_KEY", "KAMBA_MASTER_2026")
+MASTER_KEY = os.environ.get("KAMBA_MASTER_KEY")
 
-
-with app.app_context():
-    db.create_all()
+if not MASTER_KEY:
+    raise RuntimeError(
+        "KAMBA_MASTER_KEY não configurada. "
+        "Defina esta variável de ambiente antes de iniciar o backend."
+    )
 
 
 def user_dict(user):

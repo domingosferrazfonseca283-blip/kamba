@@ -59,9 +59,59 @@ Esta interface não autentica credenciais no navegador. A validação real será
 </section>
 </main>
 <script>
-document.getElementById("teamLoginForm").addEventListener("submit", function(event){
+const form = document.getElementById("teamLoginForm");
+const errorBox = document.getElementById("loginError");
+
+function apiBase() {
+    if (window.KAMBA_API) return window.KAMBA_API.replace(/\\/$/, "");
+    if (["localhost", "127.0.0.1"].includes(window.location.hostname)) {
+        return "http://127.0.0.1:5000/api";
+    }
+    return "";
+}
+
+form.addEventListener("submit", async function(event) {
     event.preventDefault();
-    document.getElementById("loginError").textContent = "A autenticação será ligada ao endpoint empresarial do backend Kamba."; document.getElementById("loginError").style.display = "block";
+    errorBox.style.display = "none";
+
+    const base = apiBase();
+    if (!base) {
+        errorBox.textContent = "A API Kamba ainda não está configurada para este endereço do site.";
+        errorBox.style.display = "block";
+        return;
+    }
+
+    const email = document.getElementById("email").value.trim();
+    const key = document.getElementById("key").value;
+
+    try {
+        const response = await fetch(base + "/admin/company-login", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({email, key})
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok || !data.token) {
+            throw new Error(data.error || "Não foi possível iniciar a sessão.");
+        }
+
+        sessionStorage.setItem("kamba_company_token", data.token);
+        sessionStorage.setItem("kamba_company_user", JSON.stringify({
+            id: data.id,
+            name: data.name,
+            email: data.email,
+            role: data.role,
+            area: data.area,
+            is_admin: data.is_admin
+        }));
+
+        window.location.href = "cabine.html";
+    } catch (error) {
+        errorBox.textContent = error.message;
+        errorBox.style.display = "block";
+    }
 });
 </script>
 </body>

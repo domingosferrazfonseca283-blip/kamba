@@ -735,14 +735,25 @@ def create_proposal():
 
 @app.post("/api/contracts")
 def create_contract():
+    session = get_auth_session()
+
+    if not session:
+        return jsonify({
+            "error": "Não autenticado."
+        }), 401
+
+    user = session.user
+
+    if not user or user.role != "client":
+        return jsonify({
+            "error": "Apenas clientes podem criar contratos."
+        }), 403
+
     data = request.get_json(silent=True) or {}
 
     required = [
         "request_id",
-        "proposal_id",
-        "client_id",
-        "professional_id",
-        "price"
+        "proposal_id"
     ]
 
     missing = [
@@ -756,23 +767,73 @@ def create_contract():
             "fields": missing
         }), 400
 
+    try:
+        request_id = int(data["request_id"])
+        proposal_id = int(data["proposal_id"])
+    except (TypeError, ValueError):
+        return jsonify({
+            "error": "request_id e proposal_id devem possuir valores válidos."
+        }), 400
+
+    if request_id <= 0 or proposal_id <= 0:
+        return jsonify({
+            "error": "request_id e proposal_id devem ser válidos."
+        }), 400
+
+    request_item = ServiceRequest.query.get(request_id)
+
+    if not request_item:
+        return jsonify({
+            "error": "Pedido não encontrado."
+        }), 404
+
+    if request_item.client_id != user.id:
+        return jsonify({
+            "error": "Não tens permissão para criar um contrato para este pedido."
+        }), 403
+
+    proposal = Proposal.query.get(proposal_id)
+
+    if not proposal:
+        return jsonify({
+            "error": "Proposta não encontrada."
+        }), 404
+
+    if proposal.request_id != request_item.id:
+        return jsonify({
+            "error": "A proposta não pertence a este pedido."
+        }), 409
+
+    if proposal.status != "accepted":
+        return jsonify({
+            "error": "A proposta deve estar aceite antes de criar o contrato."
+        }), 409
+
+    existing = Contract.query.filter_by(
+        request_id=request_item.id
+    ).first()
+
+    if existing:
+        return jsonify({
+            "error": "Este pedido já possui um contrato."
+        }), 409
+
     contract = Contract(
-        request_id=data["request_id"],
-        proposal_id=data["proposal_id"],
-        client_id=data["client_id"],
-        professional_id=data["professional_id"],
-        price=data["price"],
+        request_id=request_item.id,
+        proposal_id=proposal.id,
+        client_id=request_item.client_id,
+        professional_id=proposal.professional_id,
+        price=proposal.price,
         status="active"
     )
 
-    db.session.add(contract)
-
-    req = ServiceRequest.query.get(data["request_id"])
-
-    if req:
-        req.status = "contracted"
-
-    db.session.commit()
+    try:
+        db.session.add(contract)
+        request_item.status = "contracted"
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
 
     return jsonify(contract.to_dict()), 201
 

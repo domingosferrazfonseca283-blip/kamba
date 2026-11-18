@@ -11,6 +11,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   gerar-pdf:
@@ -18,6 +19,8 @@ jobs:
     steps:
       - name: Obter repositório
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Preparar Python
         uses: actions/setup-python@v5
@@ -30,16 +33,28 @@ jobs:
           pip install markdown beautifulsoup4 reportlab
 
       - name: Gerar PDF
-        run: python scripts/gerar_pdf_kamba.py
+        run: |
+          python scripts/gerar_pdf_kamba.py
+          test -s docs/descricao-tecnica-projeto-kamba.pdf
+          file docs/descricao-tecnica-projeto-kamba.pdf
+
+      - name: Guardar PDF como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: kamba-descricao-tecnica-pdf
+          path: docs/descricao-tecnica-projeto-kamba.pdf
+          if-no-files-found: error
+          retention-days: 90
 
       - name: Publicar PDF no repositório
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/descricao-tecnica-projeto-kamba.pdf
+          git add -f docs/descricao-tecnica-projeto-kamba.pdf
+          git status --short
           if git diff --cached --quiet; then
             echo "O PDF já está atualizado."
           else
-            git commit -m "docs: gerar PDF da descrição técnica Kamba"
-            git push
+            git commit -m "docs: publicar PDF da descrição técnica Kamba"
+            git push origin HEAD:main
           fi

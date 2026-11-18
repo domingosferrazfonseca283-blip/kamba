@@ -1,0 +1,45 @@
+name: Gerar PDF da documentação Kamba
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/descricao-tecnica-projeto-kamba.md"
+      - "scripts/gerar_pdf_kamba.py"
+      - ".github/workflows/gerar-pdf-kamba.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  gerar-pdf:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Obter repositório
+        uses: actions/checkout@v4
+
+      - name: Preparar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependências
+        run: |
+          python -m pip install --upgrade pip
+          pip install markdown beautifulsoup4 reportlab
+
+      - name: Gerar PDF
+        run: python scripts/gerar_pdf_kamba.py
+
+      - name: Publicar PDF no repositório
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/descricao-tecnica-projeto-kamba.pdf
+          if git diff --cached --quiet; then
+            echo "O PDF já está atualizado."
+          else
+            git commit -m "docs: gerar PDF da descrição técnica Kamba"
+            git push
+          fi
